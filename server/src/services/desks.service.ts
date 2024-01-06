@@ -1,31 +1,37 @@
-import { Desk } from "../models/desk.model";
+import { DeskDto } from '../models/desk.model';
 
-export function getDesksSer(): Desk[] {
-  console.log("Fetching desks");
+
+type DesksServiceParams = {
+  deskIds?: string[]
+  interval: { count: number, unit: 'day' | 'week' | 'month' | 'year' }
+}
+
+export function getDesksService({ deskIds = [], interval: { count, unit } }: DesksServiceParams): DeskDto[] {
+  console.log('Fetching desks');
   return [
     {
       id: 0,
-      status: "Inactive",
-      lastUsed: new Date("2023-12-20"),
-      averageWorkhoursUsage10days: 8,
-      averageDailyUsage10days: 5,
-      shortUsagesCount10days: 4,
+      status: 'inactive',
+      lastUsed: new Date('2023-12-20'),
+      averageWorkHoursUsage: 8,
+      averageDailyUsage: 5,
+      shortUsagesCount: 4,
     },
     {
       id: 1,
-      status: "Active",
-      lastUsed: new Date("2024-01-3"),
-      averageWorkhoursUsage10days: 16,
-      averageDailyUsage10days: 9,
-      shortUsagesCount10days: 2,
+      status: 'active',
+      lastUsed: new Date('2024-01-3'),
+      averageWorkHoursUsage: 16,
+      averageDailyUsage: 9,
+      shortUsagesCount: 2,
     },
     {
       id: 2,
-      status: "Archived",
-      lastUsed: new Date("2021-01-01"),
-      averageWorkhoursUsage10days: 0,
-      averageDailyUsage10days: 0,
-      shortUsagesCount10days: 0,
+      status: 'offline',
+      lastUsed: new Date('2021-01-01'),
+      averageWorkHoursUsage: 0,
+      averageDailyUsage: 0,
+      shortUsagesCount: 0,
     },
   ];
 }
