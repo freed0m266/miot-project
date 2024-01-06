@@ -1,5 +1,6 @@
 export type DeskDto = {
-  id: number;
+  id: string;
+  zoneId: string;
   status: DeskStatus;
   lastUsed: Date;
   averageWorkHoursUsage: number;
