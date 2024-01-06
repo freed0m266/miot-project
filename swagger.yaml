@@ -22,62 +22,134 @@ paths:
   /desks:
     get:
       tags:
-        - desk
-      summary: Get list of all desks
-      description: Get a list of all desks in the office.
-      operationId: getObject
+        - Desks
+      summary: Get list of desks
+      description: Retrieve a list of all or selected desks in a zone.
+      operationId: getDesks
       parameters:
+        - in: query
+          name: zoneId
+          schema:
+            type: string
+          required: true
+          example: "floor0"
+          description: Identifier of the zone where requested desks are located.
         - in: query
           name: deskIds
           schema:
             type: array
             items:
               type: string
-          description: The list of desks the endpoint should return. If empty, all desks are returned
+          description: The list of desk identifiers the endpoint should return. If empty or null, all desks are returned.
+          required: false
         - in: query
-          name: interval
+          name: count
           schema:
-            type: object
-            properties:
-              count: 
-                type: integer
-              unit:
-                type: string
-                enum:
-                - days
-                - weeks
-                - months
-                - years
-          example:
-            {
-            "count": 10,
-            "unit": "days"
-            }
-          style: form
-          explode: true
-          description: Time interval of data to be returned.
-
+            type: integer
+            minimum: 1
+          required: false
+          example: 10
+          description: Number of units defining interval from which data should be returned. If null, default value of 10 is used.
+        - in: query
+          name: unit
+          schema:
+            type: string
+            enum:
+              - days
+              - weeks
+              - months
+              - years
+          required: false
+          example: "days"
+          description: Time unit of interval from which data should be returned. If null, default value of `days` is used.
       responses:
           '200':
-            description: List of all desks in the office
+            description: List of all desks in the office.
             content:
               application/json:
                 schema:
                   type: array
                   items:
                     $ref: '#/components/schemas/Desk'
+          '404':
+            description: The selected zone doesn't exist.
+          '401':
+            description: Unauthorized.
+          '400':
+            description: Bad request. Check if the provided desk ids, interval count and unit are valid.
+          '500':
+            description: Server error.
+                    
+    post:
+      tags:
+        - Desks
+      summary: Create a desk
+      description: Create a desk within a zone. Only available to Admin users.
+      operationId: postDesk
+      requestBody:
+        required: true
+        description: Info about the new desk.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeskRequest'
+      responses:
+        '201':
+          description: The desk has been created.
+        '401':
+          description: Unauthorized.
+        '404':
+            description: The selected zone doesn't exist.
+        '500':
+            description: Server error.
+      
+    delete:
+      tags:
+        - Desks
+      summary: Delete a desk
+      description: Delete a desk within a zone. Only available to Admin users.
+      operationId: deleteDesk
+      parameters:
+        - in: query
+          name: zoneId
+          schema:
+            type: string
+          required: true
+          example: "floor0"
+          description: Identifier of the zone where the desk is located.
+        - in: query
+          name: deskId
+          schema:
+            type: string
+          required: true
+          example: "c74caac5-ff7e-4019-8cea-54ad82423776"
+          description: Identifier of the desk to be deleted.
+      responses:
+        '200':
+          description: The desk has been deleted.
+        '401':
+          description: Unauthorized.
+        '404':
+            description: The selected zone doesn't exist or the selected desk doesn't exist within selected zone.
+        '500':
+            description: Server error.
+      
 components:
   schemas:
     Desk:
       type: object
       properties:
         id:
-          type: integer
-          description: unique id of table with the device
-          example: 01
+          type: string
+          description: Unique id of desk with the device.
+          example: "c74caac5-ff7e-4019-8cea-54ad82423776"
+        zoneId:
+          type: string
+          description: Unique id of zone containing the desk.
+          example: "floor-1"
         status:
           type: string
-          description: Desk usage status
+          description: Desk usage status.
           enum:
             - active
             - inactive
@@ -85,21 +157,32 @@ components:
         lastUsed:
           type: string
           format: date-time
-          description: Datetime when the desk was last in use
+          description: Datetime when the desk was last in use.
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}:[0-9]{3}Z$"
           example: "2023-01-01T11:40:00.000Z"
         averageWorkhoursUsage:
           type: number
           format: float
-          description: Average daily usage of the desk during workhours in minutes for the selected interval
+          description: Average daily usage of the desk during workhours in minutes for the selected interval.
           example: 120.1
         averageDailyUsage:
           type: number
           format: float
-          description: Average daily usage of the desk in minutes for the selected interval
+          description: Average daily usage of the desk in minutes for the selected interval.
           example: 183.5
         shortUsagesCounts:
           type: integer
           format: int32
-          description: Number of short term (under 15 minutes) usages of the desk during the selected interval
+          description: Number of short term (under 15 minutes) usages of the desk during the selected interval.
           example: 17
+    CreateDeskRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique id of desk with the device. Has to match the id of the Current device.
+          example: c74caac5-ff7e-4019-8cea-54ad82423776
+        zoneId:
+          type: string
+          description: Unique id of zone containing the desk.
+          example: "floor-1"
