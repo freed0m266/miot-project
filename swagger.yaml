@@ -18,6 +18,10 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   version: 0.1.0
+  
+security:
+  - api_key: []
+
 paths:
   /desks:
     get:
@@ -186,3 +190,9 @@ components:
           type: string
           description: Unique id of zone containing the desk.
           example: "floor-1"
+          
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
