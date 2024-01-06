@@ -3,10 +3,11 @@ import { DeskDto } from '../models/desk.model';
 
 type DesksServiceParams = {
   deskIds?: string[]
-  interval: { count: number, unit: 'day' | 'week' | 'month' | 'year' }
+  count: number;
+  unit: 'day' | 'week' | 'month' | 'year';
 }
 
-export function getDesksService({ deskIds = [], interval: { count, unit } }: DesksServiceParams): DeskDto[] {
+export function getDesksService({ deskIds = [], count, unit }: DesksServiceParams): DeskDto[] {
   console.log('Fetching desks');
   return [
     {
