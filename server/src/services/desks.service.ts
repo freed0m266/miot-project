@@ -27,7 +27,7 @@ export function getDesksService({ tableIds = [], interval: { count, unit } }: De
     },
     {
       id: 2,
-      status: 'archived',
+      status: 'offline',
       lastUsed: new Date('2021-01-01'),
       averageWorkHoursUsage: 0,
       averageDailyUsage: 0,

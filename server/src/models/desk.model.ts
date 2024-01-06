@@ -7,4 +7,4 @@ export type DeskDto = {
   shortUsagesCount: number;
 };
 
-export type DeskStatus = "active" | "inactive" | "archived";
+export type DeskStatus = "active" | "inactive" | "offline";
