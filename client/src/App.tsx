@@ -1,14 +1,29 @@
-import './App.css';
-import TableClass from './components/Table.tsx';
+import TableClass from './components/Table';
 
-function App() {
-
+const App: React.FC = () => {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-      <TableClass
-        tables={[{ status: 'active' }, { status: 'inactive' }, { status: 'active' }, { status: 'active' }, { status: 'inactive' }, { status: 'active' }]} />
-    </div>
+    <div className="min-h-screen bg-gray-100">
+      <nav className="bg-blue-500 text-white p-4 w-full">
+        <h1 className="text-center">IoT - Current</h1>
+      </nav>
 
+      <div className="flex justify-center px-4 py-2">
+        <div className="max-w-5xl w-full">
+          <div className='flex flex-wrap justify-center'>
+            <TableClass
+              tables={[
+                { status: 'active' },
+                { status: 'inactive' },
+                { status: 'active' },
+                { status: 'active' },
+                { status: 'inactive' },
+                { status: 'active' }
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
