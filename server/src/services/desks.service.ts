@@ -1,4 +1,7 @@
 import { DeskDto } from "../models/desk.model";
+import fs from "fs";
+import * as path from "path";
+import { parse } from "csv-parse";
 
 type GetDesksServiceParams = {
   zoneId: string;
@@ -50,16 +53,116 @@ export function getDesksService({
   ];
 }
 
-export function createDesksService({
+export async function createDesksService({
   zoneId,
   deskId,
-}: ManageDeskServiceParams): void {
+}: ManageDeskServiceParams): Promise<number> {
   console.log("Creating desk");
+
+  const exists = await doesDeskAlreadyExist(zoneId, deskId);
+  if (exists) {
+    return 400;
+  }
+
+  fs.appendFile(
+    "../server/src/persistence/desks.csv",
+    `\n${deskId}, ${zoneId}`,
+    function (err) {
+      if (err) throw err;
+    },
+  );
+
+  return 201;
 }
 
-export function deleteDesksService({
+export async function deleteDesksService({
   zoneId,
   deskId,
-}: ManageDeskServiceParams): void {
+}: ManageDeskServiceParams): Promise<number> {
   console.log("Deleting desk");
+
+  let response = null;
+  const csvFilePath = path.resolve("../server/src/persistence/desks.csv");
+  const headers = ["deskId", "zoneId"];
+
+  const rows: ManageDeskServiceParams[] = [];
+
+  // Read CSV and filter rows
+  const stream = fs.createReadStream(csvFilePath);
+  const parser = parse({
+    delimiter: ",",
+    columns: headers,
+  });
+
+  stream.pipe(parser);
+
+  parser.on("data", (row: ManageDeskServiceParams) => {
+    if (
+      !(
+        row.zoneId.trim() === zoneId.trim() &&
+        row.deskId.trim() === deskId.trim()
+      )
+    ) {
+      rows.push(row); // Exclude the row to be deleted
+    } else {
+      response = 200;
+    }
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    parser.on("end", () => {
+      resolve();
+    });
+
+    parser.on("error", (error) => {
+      response = 500;
+      reject(error);
+    });
+  });
+
+  // Write the updated content back to the CSV file
+  const updatedCsvContent = rows
+    .map((row) => Object.values(row).join(","))
+    .join("\n");
+  fs.writeFileSync(csvFilePath, updatedCsvContent, { encoding: "utf-8" });
+
+  return response;
+}
+
+async function doesDeskAlreadyExist(
+  zoneId: string,
+  deskId: string,
+): Promise<boolean> {
+  const csvFilePath = path.resolve("../server/src/persistence/desks.csv");
+  const headers = ["deskId", "zoneId"];
+
+  return new Promise<boolean>((resolve, reject) => {
+    const stream = fs.createReadStream(csvFilePath);
+
+    const parser = parse({
+      delimiter: ",",
+      columns: headers,
+    });
+
+    stream.pipe(parser);
+
+    let deskExists = false;
+
+    parser.on("data", (row: ManageDeskServiceParams) => {
+      if (
+        row.zoneId.trim() === zoneId.trim() &&
+        row.deskId.trim() === deskId.trim()
+      ) {
+        deskExists = true;
+      }
+    });
+
+    parser.on("end", () => {
+      resolve(deskExists);
+    });
+
+    parser.on("error", (error) => {
+      reject(error);
+    });
+  });
 }
