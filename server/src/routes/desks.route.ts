@@ -1,6 +1,12 @@
 import { Router } from "express";
-import { getDesks } from "../controllers/desks.controllers";
+import {
+  createDesk,
+  deleteDesk,
+  getDesks,
+} from "../controllers/desks.controllers";
 
 const router = Router();
 router.get("/", getDesks);
+router.post("/", createDesk);
+router.delete("/", deleteDesk);
 export default router;
