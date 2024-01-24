@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import {
   createDesksService,
   deleteDesksService,
-  getDesksService,
+  getDesksServiceReal,
 } from "../services/desks.service";
 import { apiKey } from "../main";
 
@@ -10,7 +10,7 @@ type GetRequestParams = {
   zoneId: string;
   deskIds?: string[];
   count?: number;
-  unit?: "day" | "week" | "month" | "year";
+  unit?: "days" | "weeks" | "months" | "years";
 };
 
 type PostDeleteRequestParams = {
@@ -18,7 +18,7 @@ type PostDeleteRequestParams = {
   deskId: string;
 };
 
-export const getDesks: RequestHandler = (req, res, next) => {
+export const getDesks: RequestHandler = async (req, res, next) => {
   const request = req.query as unknown as GetRequestParams;
 
   const reqApiKey = req.header("api-key");
@@ -27,7 +27,7 @@ export const getDesks: RequestHandler = (req, res, next) => {
     return;
   }
 
-  const data = getDesksService(request);
+  const data = await getDesksServiceReal(request);
   res.status(200).json({ data });
 };
 

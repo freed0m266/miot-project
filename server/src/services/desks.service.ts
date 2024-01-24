@@ -1,13 +1,19 @@
-import { DeskDto } from "../models/desk.model";
+import { DeskDto, DeskStatus } from "../models/desk.model";
 import fs from "fs";
 import * as path from "path";
 import { parse } from "csv-parse";
+import { DataPoint } from "../client/influx.client";
+import {
+  getLatestActiveDataPoint,
+  getLatestDataPoint,
+  getStats,
+} from "./influx.service";
 
 type GetDesksServiceParams = {
   zoneId: string;
   deskIds?: string[];
   count?: number;
-  unit?: "day" | "week" | "month" | "year";
+  unit?: "days" | "weeks" | "months" | "years";
 };
 
 type ManageDeskServiceParams = {
@@ -51,6 +57,59 @@ export function getDesksService({
       shortUsagesCount: 0,
     },
   ];
+}
+
+export async function getDesksServiceReal({
+  zoneId,
+  deskIds = [],
+  count = 10,
+  unit = "days",
+}: GetDesksServiceParams): Promise<DeskDto[]> {
+  const desksResult: DeskDto[] = [];
+
+  if (Array.isArray(deskIds) && deskIds.length > 0) {
+    for (const deskId of deskIds) {
+      let stats = await getStats(zoneId, deskId, count, unit)[0];
+      let latestDataPoint = await getLatestDataPoint(
+        zoneId,
+        deskId,
+        count,
+        unit,
+      )[0];
+      let latestActiveDataPoint = await getLatestActiveDataPoint(
+        zoneId,
+        deskId,
+        count,
+        unit,
+      )[0];
+      desksResult.push(
+        mapToDeskDto(stats, latestDataPoint, latestActiveDataPoint),
+      );
+    }
+    return desksResult;
+  } else {
+    const allDesks = await getDesksFromCsv();
+    const allZoneDesks = allDesks.filter((i) => i.zoneId === zoneId);
+    for (const desk of allZoneDesks) {
+      let stats = await getStats(zoneId, desk.deskId, count, unit)[0];
+      let latestDataPoint = await getLatestDataPoint(
+        zoneId,
+        desk.deskId,
+        count,
+        unit,
+      )[0];
+      let latestActiveDataPoint = await getLatestActiveDataPoint(
+        zoneId,
+        desk.deskId,
+        count,
+        unit,
+      )[0];
+      desksResult.push(
+        mapToDeskDto(stats, latestDataPoint, latestActiveDataPoint),
+      );
+    }
+    return desksResult;
+  }
 }
 
 export async function createDesksService({
@@ -129,6 +188,38 @@ export async function deleteDesksService({
   return response;
 }
 
+export async function getDesksFromCsv(): Promise<ManageDeskServiceParams[]> {
+  const csvFilePath = path.resolve("../server/src/persistence/desks.csv");
+  const headers = ["deskId", "zoneId"];
+
+  const desks: ManageDeskServiceParams[] = [];
+
+  const stream = fs.createReadStream(csvFilePath);
+  const parser = parse({
+    delimiter: ",",
+    columns: headers,
+  });
+
+  stream.pipe(parser);
+
+  await new Promise<void>((resolve, reject) => {
+    parser.on("data", (row: ManageDeskServiceParams) => {
+      desks.push(row);
+    });
+
+    parser.on("end", () => {
+      desks.shift(); // Remove headers
+      resolve();
+    });
+
+    parser.on("error", (error) => {
+      reject(error);
+    });
+  });
+
+  return desks;
+}
+
 async function doesDeskAlreadyExist(
   zoneId: string,
   deskId: string,
@@ -165,4 +256,40 @@ async function doesDeskAlreadyExist(
       reject(error);
     });
   });
+}
+
+function mapToDeskDto(
+  stats: DataPoint,
+  latestDataPoint: DataPoint,
+  latestActiveDataPoint: DataPoint,
+): DeskDto {
+  return {
+    id: stats.deskId,
+    zoneId: stats.zoneId,
+    status: getDeskStatus(latestDataPoint),
+    lastUsed: latestActiveDataPoint.timestamp as Date,
+    averageWorkHoursUsage: stats.value, // ToDo
+    averageDailyUsage: stats.value, // ToDo
+    shortUsagesCount: 2, // ToDo
+  };
+}
+
+// If the desk has active usage (more than 300 rms_avg) and last data point is less than 5 minutes old
+function getDeskStatus(dataPoint: DataPoint): DeskStatus {
+  const difInSecs =
+    Math.abs(dataPoint.timestamp.valueOf() - Date.now().valueOf()) / 1000;
+
+  // Has the desk reported in last 5 minutes
+  if (difInSecs < 60 * 5) {
+    // ToDo: does 5 minutes make sense?
+    // Has the desk rms_avg over 300
+    if (dataPoint.value > 300) {
+      // ToDo: set accurate limit
+      return "active";
+    } else {
+      return "inactive";
+    }
+  } else {
+    return "offline";
+  }
 }
