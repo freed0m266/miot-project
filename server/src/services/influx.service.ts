@@ -74,7 +74,7 @@ export async function getStats(
 
 export async function getLatestDataPoint(
   zoneId: string,
-  deskId?: string,
+  deskId: string,
   count: number = 10,
   unit: "days" | "weeks" | "months" | "years" = "days",
 ): Promise<DataPoint[]> {
@@ -93,7 +93,7 @@ export async function getLatestDataPoint(
 
 export async function getLatestActiveDataPoint(
   zoneId: string,
-  deskId?: string,
+  deskId: string,
   count: number = 10,
   unit: "days" | "weeks" | "months" | "years" = "days",
 ): Promise<DataPoint[]> {

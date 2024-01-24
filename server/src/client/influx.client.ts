@@ -1,4 +1,4 @@
-const { InfluxDB, Point } = require("@influxdata/influxdb-client");
+import {InfluxDB, Point} from "@influxdata/influxdb-client";
 
 export type DataPoint = {
   timestamp: number | Date;
