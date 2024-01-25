@@ -1,9 +1,1 @@
-{
-  "scripts": {
-    "build": "npx ts-node",
-    "start": "npx ts-node server/src/main.ts",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest"
-  }
-}
+web: npx ts-node server/src/main.ts
