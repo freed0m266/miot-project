@@ -2,12 +2,14 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import "dotenv/config";
 import { Server } from "ws";
+import cron from "node-cron";
 
 import deskRoutes from "./routes/desks.route";
 import { generateApiKey } from "generate-api-key";
 
 import bodyParser from "body-parser";
 import { saveDataPoint } from "./services/influx.service";
+import { notifyDeskChanges } from "./services/notification.service";
 
 dotenv.config();
 
@@ -57,4 +59,9 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     console.log("WebSocket client disconnected");
   });
+});
+
+// cron.schedule every 5 minutes
+cron.schedule("*/5 * * * *", () => {
+  notifyDeskChanges();
 });

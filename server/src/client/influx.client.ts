@@ -38,7 +38,7 @@ export function queryInflux(fluxQuery: string): Promise<DataPoint[]> {
       },
       complete: () => {
         // console.log('\nSuccess');
-        console.log(results);
+        // console.log(results);
         resolve(results);
       },
     });

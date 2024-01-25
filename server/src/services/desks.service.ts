@@ -13,7 +13,7 @@ type GetDesksServiceParams = {
   zoneId: string;
   deskIds?: string[];
   count?: number;
-  unit?: "days" | "weeks" | "months" | "years";
+  unit?: "day" | "week" | "month" | "year";
 };
 
 type ManageDeskServiceParams = {
@@ -63,7 +63,7 @@ export async function getDesksServiceReal({
   zoneId,
   deskIds = [],
   count = 10,
-  unit = "days",
+  unit = "day",
 }: GetDesksServiceParams): Promise<DeskDto[]> {
   const desksResult: DeskDto[] = [];
 
@@ -275,12 +275,12 @@ function mapToDeskDto(
 }
 
 // If the desk has active usage (more than 300 rms_avg) and last data point is less than 5 minutes old
-function getDeskStatus(dataPoint: DataPoint): DeskStatus {
+export function getDeskStatus(dataPoint: DataPoint): DeskStatus {
   const difInSecs =
     Math.abs(dataPoint.timestamp.valueOf() - Date.now().valueOf()) / 1000;
 
-  // Has the desk reported in last 5 minutes
-  if (difInSecs < 60 * 5) {
+  // Has the desk reported in last 3 minutes
+  if (difInSecs < 60 * 3) {
     // ToDo: does 5 minutes make sense?
     // Has the desk rms_avg over 300
     if (dataPoint.value > 300) {

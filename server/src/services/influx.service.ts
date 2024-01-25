@@ -53,7 +53,7 @@ export async function getStats(
   zoneId: string,
   deskId: string,
   count: number = 10,
-  unit: "days" | "weeks" | "months" | "years" = "days",
+  unit: "day" | "week" | "month" | "year" = "day",
 ): Promise<DataPoint[]> {
   let fluxQuery = `from(bucket: "current")
       |> range(start: ${convertTimeRange(count, unit)})
@@ -76,7 +76,7 @@ export async function getLatestDataPoint(
   zoneId: string,
   deskId?: string,
   count: number = 10,
-  unit: "days" | "weeks" | "months" | "years" = "days",
+  unit: "day" | "week" | "month" | "year" = "day",
 ): Promise<DataPoint[]> {
   let fluxQuery = `from(bucket: "current")
       |> range(start: ${convertTimeRange(count, unit)})
@@ -95,7 +95,7 @@ export async function getLatestActiveDataPoint(
   zoneId: string,
   deskId?: string,
   count: number = 10,
-  unit: "days" | "weeks" | "months" | "years" = "days",
+  unit: "day" | "week" | "month" | "year" = "day",
 ): Promise<DataPoint[]> {
   let fluxQuery = `from(bucket: "current")
       |> range(start: ${convertTimeRange(count, unit)})
@@ -111,21 +111,38 @@ export async function getLatestActiveDataPoint(
   return queryInflux(fluxQuery);
 }
 
+export async function getLatestTwoDataPoints(
+  zoneId: string,
+  deskId: string,
+): Promise<DataPoint[]> {
+  let fluxQuery = `from(bucket: "current")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r["_measurement"] == "current")
+      |> filter(fn: (r) => r["_field"] == "rms_avg")
+      |> filter(fn: (r) => r["zoneId"] == "${zoneId}")
+      |> filter(fn: (r) => r["deskId"] == "${deskId}")
+      |> aggregateWindow(every: 3m, fn: last)`;
+
+  // console.log(fluxQuery);
+
+  return queryInflux(fluxQuery);
+}
+
 function convertTimeRange(
   count: number,
-  unit: "days" | "weeks" | "months" | "years",
+  unit: "day" | "week" | "month" | "year",
 ): string {
   switch (unit) {
-    case "days": {
+    case "day": {
       return `-${count.toString()}d`;
     }
-    case "weeks": {
+    case "week": {
       return `-${count.toString()}w`;
     }
-    case "months": {
+    case "month": {
       return `-${count.toString()}mo`;
     }
-    case "years": {
+    case "year": {
       return `-${count.toString()}y`;
     }
   }
@@ -133,19 +150,19 @@ function convertTimeRange(
 
 function getAggregateWindow(
   count: number,
-  unit: "days" | "weeks" | "months" | "years",
+  unit: "day" | "week" | "month" | "year",
 ): string {
   switch (unit) {
-    case "days": {
+    case "day": {
       return `${(count + 1).toString()}d`;
     }
-    case "weeks": {
+    case "week": {
       return `${(count + 1).toString()}w`;
     }
-    case "months": {
+    case "month": {
       return `${(count + 1).toString()}mo`;
     }
-    case "years": {
+    case "year": {
       return `${(count + 1).toString()}y`;
     }
   }

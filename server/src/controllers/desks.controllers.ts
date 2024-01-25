@@ -10,7 +10,7 @@ type GetRequestParams = {
   zoneId: string;
   deskIds?: string[];
   count?: number;
-  unit?: "days" | "weeks" | "months" | "years";
+  unit?: "day" | "week" | "month" | "year";
 };
 
 type PostDeleteRequestParams = {
