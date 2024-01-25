@@ -59,13 +59,13 @@ paths:
           schema:
             type: string
             enum:
-              - days
-              - weeks
-              - months
-              - years
+              - day
+              - week
+              - month
+              - year
           required: false
-          example: "days"
-          description: Time unit of interval from which data should be returned. If null, default value of `days` is used.
+          example: "day"
+          description: Time unit of interval from which data should be returned. If null, default value of `day` is used.
       responses:
           '200':
             description: List of all desks in the office.
@@ -157,7 +157,7 @@ components:
           enum:
             - active
             - inactive
-            - archived
+            - offline
         lastUsed:
           type: string
           format: date-time
