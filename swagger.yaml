@@ -157,7 +157,7 @@ components:
           enum:
             - active
             - inactive
-            - archived
+            - offline
         lastUsed:
           type: string
           format: date-time

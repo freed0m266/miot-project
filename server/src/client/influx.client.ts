@@ -1,4 +1,4 @@
-const { InfluxDB, Point } = require("@influxdata/influxdb-client");
+import { InfluxDB, Point } from "@influxdata/influxdb-client";
 
 export type DataPoint = {
   timestamp: number | Date;
@@ -58,7 +58,7 @@ export function writeToInflux({
     .timestamp(timestamp as number); // should be Unix timestamp in seconds: Math.floor(new Date().getTime() / 1000)
 
   writeClient.writePoint(point);
-  console.log("Write point: " + point.toLineProtocol());
+  // console.log("Write point: " + point.toLineProtocol());
 }
 
 export function flushToInflux(): void {
