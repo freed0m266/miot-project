@@ -111,6 +111,23 @@ export async function getLatestActiveDataPoint(
   return queryInflux(fluxQuery);
 }
 
+export async function getLatestTwoDataPoints(
+  zoneId: string,
+  deskId: string,
+): Promise<DataPoint[]> {
+  let fluxQuery = `from(bucket: "current")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r["_measurement"] == "current")
+      |> filter(fn: (r) => r["_field"] == "rms_avg")
+      |> filter(fn: (r) => r["zoneId"] == "${zoneId}")
+      |> filter(fn: (r) => r["deskId"] == "${deskId}")
+      |> aggregateWindow(every: 3m, fn: last)`;
+
+  // console.log(fluxQuery);
+
+  return queryInflux(fluxQuery);
+}
+
 function convertTimeRange(
   count: number,
   unit: "day" | "week" | "month" | "year",

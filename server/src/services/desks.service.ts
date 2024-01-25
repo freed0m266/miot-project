@@ -267,8 +267,8 @@ export function getDeskStatus(dataPoint: DataPoint): DeskStatus {
     Math.abs(new Date(dataPoint.timestamp).valueOf() - Date.now().valueOf()) /
     1000;
 
-  // Has the desk reported in last 5 minutes
-  if (difInSecs < 60 * 5) {
+  // Has the desk reported in last 3 minutes
+  if (difInSecs < 60 * 3) {
     // ToDo: does 5 minutes make sense?
     // Has the desk rms_avg over 300
     if (dataPoint.value > 300) {
