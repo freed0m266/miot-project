@@ -1,1 +1,1 @@
-web: npx ts-node server/src/main.ts
+web: cd server && npm start
