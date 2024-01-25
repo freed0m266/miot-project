@@ -1,7 +1,13 @@
-import { DeskDto } from "../models/desk.model";
+import { DeskDto, DeskStatus } from "../models/desk.model";
 import fs from "fs";
 import * as path from "path";
 import { parse } from "csv-parse";
+import { DataPoint } from "../client/influx.client";
+import {
+  getLatestActiveDataPoint,
+  getLatestDataPoint,
+  getStats,
+} from "./influx.service";
 
 type GetDesksServiceParams = {
   zoneId: string;
@@ -10,47 +16,37 @@ type GetDesksServiceParams = {
   unit?: "day" | "week" | "month" | "year";
 };
 
-type ManageDeskServiceParams = {
+export type ManageDeskServiceParams = {
   zoneId: string;
   deskId: string;
 };
 
-export function getDesksService({
+export async function getDesksService({
   zoneId,
   deskIds = [],
-  count,
-  unit,
-}: GetDesksServiceParams): DeskDto[] {
-  console.log("Fetching desks");
-  return [
-    {
-      id: "18eebf7a-7e72-4a5a-8b6a-ad26694283ab",
-      zoneId: "floor-1",
-      status: "inactive",
-      lastUsed: new Date("2023-12-20"),
-      averageWorkHoursUsage: 8,
-      averageDailyUsage: 5,
-      shortUsagesCount: 4,
-    },
-    {
-      id: "04814482-d1fb-4d96-ae11-813181dfc15f",
-      zoneId: "floor-1",
-      status: "active",
-      lastUsed: new Date("2024-01-3"),
-      averageWorkHoursUsage: 16,
-      averageDailyUsage: 9,
-      shortUsagesCount: 2,
-    },
-    {
-      id: "c5dbe9ef-c9f5-467d-b212-4f53cabe3b6c",
-      zoneId: "floor-2",
-      status: "offline",
-      lastUsed: new Date("2021-01-01"),
-      averageWorkHoursUsage: 0,
-      averageDailyUsage: 0,
-      shortUsagesCount: 0,
-    },
-  ];
+  count = 10,
+  unit = "day",
+}: GetDesksServiceParams): Promise<DeskDto[]> {
+  const desksResult: DeskDto[] = [];
+
+  if (Array.isArray(deskIds) && deskIds.length > 0) {
+    for (const deskId of deskIds) {
+      const exists = await doesDeskAlreadyExist(zoneId, deskId);
+      if (!exists) {
+        continue;
+      }
+      desksResult.push(await getDeskData(deskId, zoneId, count, unit));
+    }
+    return desksResult;
+  } else {
+    const allDesks = await getDesksFromCsv();
+    const allZoneDesks = allDesks.filter((i) => i.zoneId === zoneId);
+    const zoneDeskIds = allZoneDesks.map((i) => i.deskId);
+    for (const deskId of zoneDeskIds) {
+      desksResult.push(await getDeskData(deskId, zoneId, count, unit));
+    }
+    return desksResult;
+  }
 }
 
 export async function createDesksService({
@@ -129,6 +125,88 @@ export async function deleteDesksService({
   return response;
 }
 
+export async function getDesksFromCsv(): Promise<ManageDeskServiceParams[]> {
+  const csvFilePath = path.resolve("../server/src/persistence/desks.csv");
+  const headers = ["deskId", "zoneId"];
+
+  const desks: ManageDeskServiceParams[] = [];
+
+  const stream = fs.createReadStream(csvFilePath);
+  const parser = parse({
+    delimiter: ",",
+    columns: headers,
+  });
+
+  stream.pipe(parser);
+
+  await new Promise<void>((resolve, reject) => {
+    parser.on("data", (row: ManageDeskServiceParams) => {
+      desks.push(row);
+    });
+
+    parser.on("end", () => {
+      desks.shift(); // Remove headers
+      resolve();
+    });
+
+    parser.on("error", (error) => {
+      reject(error);
+    });
+  });
+
+  return desks;
+}
+
+async function getDeskData(deskId, zoneId, count, unit): Promise<DeskDto> {
+  const statsPromises = [];
+  const latestDataPromises = [];
+  const latestActiveDataPromises = [];
+
+  statsPromises.push(getStats(zoneId, deskId, count, unit));
+  latestDataPromises.push(getLatestDataPoint(zoneId, deskId, count, unit));
+  latestActiveDataPromises.push(
+    getLatestActiveDataPoint(zoneId, deskId, count, unit),
+  );
+
+  const stats: DataPoint[][] = await Promise.all(statsPromises);
+  const latestDataPoint: DataPoint[][] = await Promise.all(latestDataPromises);
+  const latestActiveDataPoint: DataPoint[][] = await Promise.all(
+    latestActiveDataPromises,
+  );
+
+  // If some data are not available, return an offline desk with null stats
+  if (
+    stats === undefined ||
+    stats.length == 0 ||
+    stats[0] === undefined ||
+    stats[0].length == 0 ||
+    latestDataPoint === undefined ||
+    latestDataPoint.length == 0 ||
+    latestDataPoint[0] === undefined ||
+    latestDataPoint[0].length == 0 ||
+    latestActiveDataPoint === undefined ||
+    latestActiveDataPoint.length == 0 ||
+    latestActiveDataPoint[0] === undefined ||
+    latestActiveDataPoint[0].length == 0
+  ) {
+    return {
+      id: deskId,
+      zoneId: zoneId,
+      status: "offline",
+      lastUsed: null,
+      averageWorkHoursUsage: null,
+      averageDailyUsage: null,
+      shortUsagesCount: null,
+    };
+  } else {
+    return mapToDeskDto(
+      stats[0][0],
+      latestDataPoint[0][0],
+      latestActiveDataPoint[0][0],
+    );
+  }
+}
+
 async function doesDeskAlreadyExist(
   zoneId: string,
   deskId: string,
@@ -165,4 +243,41 @@ async function doesDeskAlreadyExist(
       reject(error);
     });
   });
+}
+
+function mapToDeskDto(
+  stats: DataPoint,
+  latestDataPoint: DataPoint,
+  latestActiveDataPoint: DataPoint,
+): DeskDto {
+  return {
+    id: stats.deskId,
+    zoneId: stats.zoneId,
+    status: getDeskStatus(latestDataPoint),
+    lastUsed: latestActiveDataPoint.timestamp as Date,
+    averageWorkHoursUsage: stats.value, // ToDo
+    averageDailyUsage: stats.value, // ToDo
+    shortUsagesCount: 2, // ToDo
+  };
+}
+
+// If the desk has active usage (more than 300 rms_avg) and last data point is less than 5 minutes old
+export function getDeskStatus(dataPoint: DataPoint): DeskStatus {
+  const difInSecs =
+    Math.abs(new Date(dataPoint.timestamp).valueOf() - Date.now().valueOf()) /
+    1000;
+
+  // Has the desk reported in last 5 minutes
+  if (difInSecs < 60 * 5) {
+    // ToDo: does 5 minutes make sense?
+    // Has the desk rms_avg over 300
+    if (dataPoint.value > 300) {
+      // ToDo: set accurate limit
+      return "active";
+    } else {
+      return "inactive";
+    }
+  } else {
+    return "offline";
+  }
 }

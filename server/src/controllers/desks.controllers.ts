@@ -18,8 +18,14 @@ type PostDeleteRequestParams = {
   deskId: string;
 };
 
-export const getDesks: RequestHandler = (req, res, next) => {
+export const getDesks: RequestHandler = async (req, res, next) => {
   const request = req.query as unknown as GetRequestParams;
+  if (
+    req.query.deskIds !== undefined &&
+    (req.query.deskIds as string).length > 0
+  ) {
+    request.deskIds = (req.query.deskIds as string).split(",");
+  }
 
   const reqApiKey = req.header("api-key");
   if (reqApiKey !== apiKey) {
@@ -27,7 +33,7 @@ export const getDesks: RequestHandler = (req, res, next) => {
     return;
   }
 
-  const data = getDesksService(request);
+  const data = await getDesksService(request);
   res.status(200).json({ data });
 };
 
